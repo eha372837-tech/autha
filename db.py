@@ -3,7 +3,11 @@ import os
 import re
 import psycopg2
 
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+try:
+    import config as _settings
+except Exception:
+    _settings = None
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip() or (getattr(_settings, "DATABASE_URL", "") if _settings else "").strip()
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS admin (user_id BIGINT, expire_date TEXT);

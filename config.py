@@ -16,6 +16,7 @@ DISCORD_CLIENT_ID = ""
 DISCORD_CLIENT_SECRET = ""
 PUBLIC_BASE_URL = "https://autha-6r42.onrender.com"
 RECOVERY_LOG_WEBHOOKS = ""
+BOT_DB_API_KEY = "여기에_봇_DB_API_키_입력"
 DISCORD_API_ENDPOINT = "https://discord.com/api/v10"
 
 
@@ -51,4 +52,4 @@ base_url = 도메인
 bokweb = 복구로그웹훅
 
 # 봇이 Render DB API를 호출할 때 사용하는 비밀키
-BOT_DB_API_KEY = os.getenv("BOT_DB_API_KEY", "여기에_봇_DB_API_키_입력")
+BOT_DB_API_KEY = 봇_DB_API_키
