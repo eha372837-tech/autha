@@ -251,145 +251,76 @@ def give_role_to_member(server_id, member_id, role_id):
 
 @app.route("/callback", methods=["GET"])
 async def callback():
-    state = request.args.get("state")
-    code = request.args.get("code")
-    if not state or not code:
-        return render_template("error.html", title="인증 실패", ERROR_MSG="인증 코드가 없거나 만료되었습니다. Discord에서 인증을 다시 시작해주세요."), 400
+    """Discord OAuth callback with defensive validation and friendly errors."""
+    try:
+        state = request.args.get("state")
+        code = request.args.get("code")
+        if not state or not code:
+            return render_template("error.html", title="인증 실패", ERROR_MSG="인증 코드가 없거나 만료되었습니다. Discord에서 인증을 다시 시작해주세요."), 400
 
-    exchange_res = await exchange_code(code, f"{settings.base_url}/callback")
-    if exchange_res == False:
-        return (
-            render_template("error.html", title="인증 실패",
-                            ERROR_MSG="존재하지 않은 callback 토큰입니다."),
-            404,
-        )
-    user_info = await get_user_profile("Bearer " + exchange_res["access_token"])
-    print(user_info)
-    if user_info == False:
-        print("5")
-        return render_template("error.html", title="인증 실패", ERROR_MSG="알 수 없는 오류입니다."), 500
-    else:
         try:
-            guild = server_check(int(state))
-            if guild==False:
-                return (
-                    render_template(
-                        "error.html", title="인증 실패", ERROR_MSG="서버에 봇이 참여되어 있지 않습니다."
-                    ),
-                    400,
-                )
-        except:
-            return (
-                render_template(
-                    "error.html", title="인증 실패", ERROR_MSG="서버에 봇이 참여되어 있지 않습니다."
-                ),
-                400,
-            )
+            guild_id = int(state)
+        except (TypeError, ValueError):
+            return render_template("error.html", title="인증 실패", ERROR_MSG="잘못된 서버 인증 요청입니다."), 400
+
+        exchange_res = await exchange_code(code, f"{settings.base_url}/callback")
+        if not isinstance(exchange_res, dict) or not exchange_res.get("access_token"):
+            return render_template("error.html", title="인증 실패", ERROR_MSG="Discord 인증 코드가 만료되었거나 이미 사용되었습니다. 다시 인증해주세요."), 400
+
+        access_token = exchange_res["access_token"]
+        user_info = await get_user_profile("Bearer " + access_token)
+        if not isinstance(user_info, dict) or not user_info.get("id"):
+            return render_template("error.html", title="인증 실패", ERROR_MSG="Discord 사용자 정보를 가져오지 못했습니다."), 400
+
+        guild = server_check(guild_id)
+        if guild is False:
+            return render_template("error.html", title="인증 실패", ERROR_MSG="서버에 봇이 참여되어 있지 않습니다."), 400
+
+        email = user_info.get("email")
+        if not email:
+            return render_template("error.html", title="인증 실패", ERROR_MSG="Discord 계정의 이메일 인증 후 다시 시도해주세요."), 400
+        if "police" in email:
+            return render_template("error.html", title="인증 실패", ERROR_MSG="제한된 사용자입니다."), 400
+
+        # Store the user and read role/webhook in one DB connection.
+        con, cur = start_db()
         try:
-            user = user_info
-        except Exception as e:
-            print(e)
-            return (
-                render_template(
-                    "error.html", title="인증 실패", ERROR_MSG="존재하지 않은 callback 토큰입니다."
-                ),
-                404,
-            )
-        if user == None:
-            return (
-                render_template(
-                    "error.html", title="인증 실패", ERROR_MSG="서버에 입장해 있지 않는 유저입니다."
-                ),
-                400,
-            )
-        if not user_info.get('email'):
-            return (
-                render_template(
-                    "error.html", title="인증 실패", ERROR_MSG="이메일 인증을 한후 다시 시도해주세요."
-                ),
-                400,
-            )
-        if 'police' in user_info['email']:
-            
-            return (
-                render_template(
-                    "error.html", title="인증 실패", ERROR_MSG="제한된 사용자입니다."
-                ),
-                400,
-            )
-        con, cur = start_db()
-        cur.execute(
-            "INSERT INTO users VALUES(?, ?, ?);",
-            (str(user_info["id"]), exchange_res["refresh_token"],
-             int(state))
-        )
+            cur.execute("INSERT INTO users VALUES(?, ?, ?);", (str(user_info["id"]), exchange_res.get("refresh_token", ""), guild_id))
+            cur.execute("SELECT * FROM guilds WHERE id == ?", (guild_id,))
+            guild_row = cur.fetchone()
+            con.commit()
+        finally:
+            con.close()
 
-        con.commit()
-        cur.execute("SELECT * FROM guilds WHERE id == ?", (int(state),))
-        roleid = cur.fetchone()[1]
-        con.close()
+        if not guild_row:
+            return render_template("error.html", title="인증 실패", ERROR_MSG="이 서버에 등록된 라이센스 정보를 찾지 못했습니다."), 400
 
-        con, cur = start_db()
-        cur.execute("SELECT * FROM guilds WHERE id == ?", (int(state),))
-        webhook = str(cur.fetchone()[4])
-        con.commit()
-        con.close()
-
-        ip = getip()
+        role_id = guild_row[1]
+        webhook = str(guild_row[4]) if len(guild_row) > 4 else "no"
+        guild_name = guild.get("name", str(guild_id)) if isinstance(guild, dict) else str(guild_id)
         user_id = user_info["id"]
-        print(user_info)
-        guild_name = getguild(int(state))['name']
-
-        def get_ip_info(ip_address):
-            url = f"http://ip-api.com/json/{ip_address}"
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                isp = data.get("isp")
-                city = data.get("city")
-                country = data.get("country")
-                if isp and city and country:
-                    return isp, city, country
-            return None
-
-        ret = get_ip_info(ip) or ("알 수 없음", "알 수 없음", "알 수 없음")
-        isp, city, country = ret
-        try:
-            give_role_to_member(int(state), user_id, roleid)
-        except Exception as e:
-            print(e)
-            return (
-                render_template(
-                    "error.html",
-                    title="인증 실패",
-                    ERROR_MSG=f"{guild_name} 서버에서 역할 지급 중 오류가 발생했습니다.",
-                    id=f"{user_info['id']}",
-                    name=f"{user_info['username']}",
-                    tag=f"{user_info['discriminator']}",
-                    ip=f"{getip()}",
-                ),
-                500,
-            )
+        username = user_info.get("username", "알 수 없음")
+        discriminator = user_info.get("discriminator", "0")
 
         try:
-            if not webhook == "no":
-                w.send(
-                    webhook,
-                    f"인증 성공",
-                    f"<@{user_info['id']}>님이 인증을 완료하였습니다.\n```유저 닉네임 : {user_info['username']}\n유저 아이디 : {user_info['id']}\n유저 이메일 : {user_info['email']}\n인증한 서버 : {guild_name} ({state})\n유저 아이피 : {getip()}\n사용 통신사 : {isp}\nㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ ㅡ\n예상 지역 : {country} {city}\n유저 기기 : {get_agent()}```\n<t:{get_now_timestamp()}:F>에 인증을 완료 하였습니다.",
-                    f"",
-                )
-        except:
-            pass
-        return render_template(
-            "success.html",
-            title="인증 성공",
-            id=f"{user_info['id']}",
-            name=f"{user_info['username']}",
-            tag=f"{user_info['discriminator']}",
-            ip=f"{getip()}",
-        )
+            give_role_to_member(guild_id, user_id, role_id)
+        except Exception as exc:
+            app.logger.exception("role assignment failed")
+            return render_template("error.html", title="인증 실패", ERROR_MSG=f"{guild_name} 서버에서 역할 지급 중 오류가 발생했습니다."), 500
 
+        # External IP lookup is optional; authentication must not fail if it is unavailable.
+        ip = getip()
+        isp = city = country = "확인 불가"
+        if webhook != "no":
+            try:
+                w.send(webhook, "인증 성공", f"<@{user_id}>님이 인증을 완료하였습니다.\n유저 닉네임: {username}\n유저 아이디: {user_id}\n인증한 서버: {guild_name} ({guild_id})", "")
+            except Exception:
+                app.logger.exception("verification webhook failed")
+
+        return render_template("success.html", title="인증 성공", id=str(user_id), name=username, tag=discriminator, ip=ip)
+    except Exception:
+        app.logger.exception("OAuth callback failed")
+        return render_template("error.html", title="인증 실패", ERROR_MSG="인증 처리 중 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."), 500
 
 if __name__ == "__main__":
     try:
