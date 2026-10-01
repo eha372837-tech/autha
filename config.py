@@ -9,14 +9,14 @@ import os
 # ============================================================
 # Render 웹사이트 설정 — 여기에 직접 입력할 수 있습니다.
 # ============================================================
-DATABASE_URL = "여기에_Supabase_연결문자열_입력"
-DISCORD_BOT_TOKEN = ""
-DISCORD_ADMIN_IDS = ""
-DISCORD_CLIENT_ID = ""
-DISCORD_CLIENT_SECRET = ""
+DATABASE_URL = "postgresql://postgres.jcidwpqtyoqjtkzmkdrj:sdhfisdhgfisfdhgpi@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres"
+DISCORD_BOT_TOKEN = "MTU1NDM0NjQ2NTYxMzMyMDMwMg.GkYinn.KqSkGEs12h0pp2S61ea1wJGgus0rsNCz0WXR6w"
+DISCORD_ADMIN_IDS = "1359023814587056319"
+DISCORD_CLIENT_ID = "1554346465613320302"
+DISCORD_CLIENT_SECRET = "1fivorcKe1Bce6aG8g9SEhxIti7dafak"
 PUBLIC_BASE_URL = "https://autha-6r42.onrender.com"
 RECOVERY_LOG_WEBHOOKS = ""
-BOT_DB_API_KEY = "여기에_봇_DB_API_키_입력"
+BOT_DB_API_KEY = "F13_wsv_9xK4mP7qL2vN8rT5"
 DISCORD_API_ENDPOINT = "https://discord.com/api/v10"
 
 
