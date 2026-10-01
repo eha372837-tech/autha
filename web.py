@@ -253,6 +253,8 @@ def give_role_to_member(server_id, member_id, role_id):
 async def callback():
     state = request.args.get("state")
     code = request.args.get("code")
+    if not state or not code:
+        return render_template("error.html", title="인증 실패", ERROR_MSG="인증 코드가 없거나 만료되었습니다. Discord에서 인증을 다시 시작해주세요."), 400
 
     exchange_res = await exchange_code(code, f"{settings.base_url}/callback")
     if exchange_res == False:
@@ -300,7 +302,7 @@ async def callback():
                 ),
                 400,
             )
-        if user_info['email'] == None:
+        if not user_info.get('email'):
             return (
                 render_template(
                     "error.html", title="인증 실패", ERROR_MSG="이메일 인증을 한후 다시 시도해주세요."
@@ -350,7 +352,7 @@ async def callback():
                     return isp, city, country
             return None
 
-        ret = get_ip_info(ip)
+        ret = get_ip_info(ip) or ("알 수 없음", "알 수 없음", "알 수 없음")
         isp, city, country = ret
         try:
             give_role_to_member(int(state), user_id, roleid)

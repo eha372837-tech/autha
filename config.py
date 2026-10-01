@@ -14,7 +14,7 @@ DISCORD_BOT_TOKEN = ""
 DISCORD_ADMIN_IDS = ""
 DISCORD_CLIENT_ID = ""
 DISCORD_CLIENT_SECRET = ""
-PUBLIC_BASE_URL = "https://auth-8qmu.onrender.com"
+PUBLIC_BASE_URL = "https://autha-6r42.onrender.com"
 RECOVERY_LOG_WEBHOOKS = ""
 DISCORD_API_ENDPOINT = "https://discord.com/api/v10"
 

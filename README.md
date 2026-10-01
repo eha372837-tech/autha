@@ -38,7 +38,7 @@ DISCORD_BOT_TOKEN=Discord 봇 토큰
 DISCORD_ADMIN_IDS=관리자 Discord ID
 DISCORD_CLIENT_ID=Discord Application ID
 DISCORD_CLIENT_SECRET=Discord OAuth2 Client Secret
-PUBLIC_BASE_URL=https://auth-8qmu.onrender.com
+PUBLIC_BASE_URL=https://autha-6r42.onrender.com
 DISCORD_API_ENDPOINT=https://discord.com/api/v10
 RECOVERY_LOG_WEBHOOKS=
 ```
@@ -62,7 +62,7 @@ Supabase → Connect → Direct → URI → **Session pooler**에서 복사합�
 Discord Developer Portal → OAuth2 → Redirects에 아래 주소를 등록합니다.
 
 ```text
-https://auth-8qmu.onrender.com/callback
+https://autha-6r42.onrender.com/callback
 ```
 
 `PUBLIC_BASE_URL`에는 `/callback`을 붙이지 않습니다.
@@ -89,7 +89,7 @@ Render Web Service의 Environment에 아래 값을 추가합니다.
 BOT_DB_API_KEY=봇과_공유하는_긴_랜덤_키
 ```
 
-봇의 `start.py`에도 동일한 키를 입력합니다. 봇은 `REMOTE_DB_URL=https://auth-8qmu.onrender.com`으로 Render 웹의 내부 DB API를 호출합니다.
+봇의 `start.py`에도 동일한 키를 입력합니다. 봇은 `REMOTE_DB_URL=https://autha-6r42.onrender.com`으로 Render 웹의 내부 DB API를 호출합니다.
 
 ## DB 없는 봇 연결
 
