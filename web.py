@@ -237,17 +237,20 @@ def get_role_info(role_id):
         print(response.text)
 
 def give_role_to_member(server_id, member_id, role_id):
+    if not role_id or str(role_id) == "0":
+        return False, "역할이 아직 설정되지 않았습니다. Discord에서 /역할 명령어를 먼저 실행하세요."
     headers = {
         'Authorization': f'Bot {settings.token}',
         'Content-Type': 'application/json'
     }
     url = f'{settings.api_endpoint}/guilds/{server_id}/members/{member_id}/roles/{role_id}'
-    response = requests.put(url, headers=headers)
+    response = requests.put(url, headers=headers, timeout=20)
     if response.status_code == 204:
         print("Role successfully given to member!")
-    else:
-        print(f"Failed to give role to member. Status code: {response.status_code}")
-        print(response.text)
+        return True, ""
+    detail = f"Discord API {response.status_code}: {response.text[:300]}"
+    print(f"Failed to give role to member. {detail}")
+    return False, detail
 
 @app.route("/callback", methods=["GET"])
 async def callback():
@@ -303,10 +306,12 @@ async def callback():
         discriminator = user_info.get("discriminator", "0")
 
         try:
-            give_role_to_member(guild_id, user_id, role_id)
-        except Exception as exc:
+            role_ok, role_error = give_role_to_member(guild_id, user_id, role_id)
+        except Exception:
             app.logger.exception("role assignment failed")
-            return render_template("error.html", title="인증 실패", ERROR_MSG=f"{guild_name} 서버에서 역할 지급 중 오류가 발생했습니다."), 500
+            role_ok, role_error = False, "Render에서 Discord 역할 API 호출에 실패했습니다."
+        if not role_ok:
+            return render_template("error.html", title="인증 실패", ERROR_MSG=f"{guild_name} 서버에서 역할 지급에 실패했습니다.\n{role_error}"), 400
 
         # External IP lookup is optional; authentication must not fail if it is unavailable.
         ip = getip()
